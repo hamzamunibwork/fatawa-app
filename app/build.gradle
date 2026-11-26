@@ -14,20 +14,24 @@ android {
         versionName '1.0'
     }
 
-    // مفتاح توقيع ثابت: كل نسخة جديدة تُثبَّت فوق القديمة دون حذفها
+    // مفتاح توقيع ثابت وسري: لا يُحفظ في المستودع، بل في «أسرار» GitHub (Secrets)،
+    // ويضعه البناء التلقائي في ملف مؤقت. فكل نسخة جديدة تُثبَّت فوق القديمة دون حذفها.
     signingConfigs {
         fw {
-            storeFile file('fatawa.keystore')
-            storePassword 'fatawa-muyassara'
-            keyAlias 'fatawa'
-            keyPassword 'fatawa-muyassara'
+            def ks = System.getenv('FW_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('FW_KEY_PASSWORD')
+                keyAlias 'fatawa'
+                keyPassword System.getenv('FW_KEY_PASSWORD')
+            }
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.fw
+            if (System.getenv('FW_KEYSTORE')) signingConfig signingConfigs.fw
         }
     }
 

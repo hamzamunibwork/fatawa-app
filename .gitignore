@@ -9,3 +9,6 @@ desktop/www/
 desktop/dist/
 ios/www/
 ios/*.xcodeproj/
+*.keystore
+*.jks
+سري_*
