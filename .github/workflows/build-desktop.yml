@@ -1,0 +1,69 @@
+# بناء تطبيق ويندوز وماك — يُشغَّل يدويا من تبويب Actions ← Run workflow، ويُشغَّل وحده إذا تغيّر غلاف سطح المكتب
+# (تحديث المحتوى والبرنامج يصل من الخادم بلا إعادة بناء)
+name: build-desktop
+on:
+  workflow_dispatch:
+  push:
+    paths: ['desktop/**', '.github/workflows/build-desktop.yml']
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: نسخ ملفات التطبيق
+        shell: bash
+        run: cp -r app/src/main/assets/www desktop/www
+      - name: البناء
+        working-directory: desktop
+        shell: bash
+        run: |
+          npm install
+          npx electron-builder --win --publish never
+      # يُنشر في «الإصدارات» (Releases): مساحتها منفصلة عن مساحة Actions فلا تمتلئ
+      - name: النشر في الإصدارات
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-${{ github.run_number }}
+          name: "نسختا ويندوز والماك (${{ github.run_number }})"
+          files: desktop/dist/*.exe
+          make_latest: false
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: نسخ ملفات التطبيق
+        run: cp -r app/src/main/assets/www desktop/www
+      - name: البناء
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm install
+          npx electron-builder --mac --publish never
+          APP=$(ls -d dist/mac*/*.app | head -1)
+          codesign --force --deep -s - "$APP"
+          mkdir dmgsrc && cp -R "$APP" dmgsrc/ && ln -s /Applications dmgsrc/Applications
+          hdiutil create -volname "Al-Fatawa Al-Muyassara" -srcfolder dmgsrc -ov -format UDZO FatawaMuyassara-mac.dmg
+      - name: النشر في الإصدارات
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-${{ github.run_number }}
+          name: "نسختا ويندوز والماك (${{ github.run_number }})"
+          files: desktop/FatawaMuyassara-mac.dmg
+          make_latest: false
+      # نسخة ثابتة الرابط لمثبّت تطبيقات منيب
+      - name: النسخة الثابتة للماك
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: "آخر إصدار من التطبيق (روابط ثابتة)"
+          files: desktop/FatawaMuyassara-mac.dmg
+          make_latest: false

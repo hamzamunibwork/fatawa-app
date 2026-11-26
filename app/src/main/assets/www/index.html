@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F5E3B">
+<title>الفتاوى الميسّرة</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<header class="bar">
+  <button class="ib" id="back" data-act="back" aria-label="رجوع" hidden><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <div class="bt" id="barTitle">الفتاوى الميسّرة</div>
+  <button class="ib" data-act="search" aria-label="بحث"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+  <button class="ib" data-act="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</header>
+<main id="view"></main>
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-in">
+    <div class="sh-head"><b>الإعدادات</b><button class="ib" data-act="closeSheet" aria-label="إغلاق"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="row"><span>حجم الخط</span><div class="seg"><button data-act="fs" data-v="-1">أ−</button><button data-act="fs" data-v="1">أ+</button></div></div>
+    <div class="row"><span>المظهر</span><div class="seg"><button data-act="theme" data-v="light">فاتح</button><button data-act="theme" data-v="dark">داكن</button></div></div>
+    <div class="row"><span>التحقق من التحديث</span><button class="btn" data-act="ota">تحقق الآن</button></div>
+    <div class="about" id="about"></div>
+  </div>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>window.BOOT_CFG = {"app":"fatawa","shell":"1.0","prefix":"fw.","skey":"prefs","ok":"#view","order":["assets/app.css","data/fatawa.js","assets/app.js"],"pack":["data/fatawa.js"]};</script>
+<script src="assets/boot.js"></script>
+</body>
+</html>

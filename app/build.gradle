@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.abdulhasib.fatawa'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.abdulhasib.fatawa'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // مفتاح توقيع ثابت: كل نسخة جديدة تُثبَّت فوق القديمة دون حذفها
+    signingConfigs {
+        fw {
+            storeFile file('fatawa.keystore')
+            storePassword 'fatawa-muyassara'
+            keyAlias 'fatawa'
+            keyPassword 'fatawa-muyassara'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.fw
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

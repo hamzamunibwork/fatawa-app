@@ -1,0 +1,20 @@
+الفتاوى الميسّرة في ضوء الكتاب والسنة — مستودع التطبيق (fatawa-app)
+جمعه وأعده: عبد الحسيب منيب الأفغاني
+
+ما في هذا المستودع
+- app/ : تطبيق أندرويد. صفحات التطبيق نفسها في app/src/main/assets/www
+- ios/ : مشروع الآيباد والآيفون (يُجهَّز تلقائيًّا لمثبّت تطبيقات منيب)
+- desktop/ : تطبيق ويندوز وماك
+- tools/make_data.py : يحوّل ملف الفتاوى من مستودع fatawa-sources إلى بيانات التطبيق (www/data/fatawa.js)
+- tools/code_pack.py : ينشر التحديث على الخادم (munib-content) فيصل إلى الأجهزة بلا تثبيت جديد
+
+البناء
+بعد الرفع إلى GitHub تُبنى النسخ تلقائيًّا، وتظهر في صفحة «الإصدارات» (Releases):
+- أندرويد: fatawa-muyassara.apk
+- ويندوز وماك: من ملف build-desktop
+- الآيباد والآيفون: بمثبّت تطبيقات منيب، باسم fatawa
+
+إضافة فتاوى جديدة بعد التثبيت (بلا تثبيت جديد)
+1) python3 tools/make_data.py <ملف الفتاوى json>
+2) python3 tools/code_pack.py <مجلد munib-content> --all --note "فتاوى جديدة"
+3) ارفع munib-content بـ GitHub Desktop

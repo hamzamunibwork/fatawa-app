@@ -1,0 +1,47 @@
+name: FatawaMuyassara
+options:
+  bundleIdPrefix: com.abdulhasib
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  FatawaMuyassara:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: FatawaMuyassara
+      - path: www
+        type: folder
+        buildPhase: resources
+    info:
+      path: FatawaMuyassara/Info.plist
+      properties:
+        CFBundleDisplayName: "الفتاوى الميسّرة"
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: ""
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes:
+          - audio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abdulhasib.fatawa
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "3"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO

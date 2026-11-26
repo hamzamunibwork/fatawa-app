@@ -1,0 +1,33 @@
+# تجهيز مشروع الآيباد والآيفون (Xcode) لمثبّت تطبيقات منيب
+# يُنتج ملفًّا ثابت الرابط في الإصدار app-latest: FatawaMuyassara-ipad-xcode.zip
+name: build-ios-project
+on:
+  workflow_dispatch:
+  push:
+    paths: ['app/src/main/assets/www/**', 'ios/**', '.github/workflows/build-ios-project.yml']
+permissions:
+  contents: write
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: توليد المشروع
+        run: |
+          brew install xcodegen
+          rm -rf ios/www && cp -r app/src/main/assets/www ios/www
+          cd ios && xcodegen generate
+      - name: فحص البناء (بدون توقيع)
+        run: |
+          cd ios && xcodebuild -project FatawaMuyassara.xcodeproj -scheme FatawaMuyassara \
+            -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build | tail -20
+      - name: تجهيز مشروع الآيباد كاملًا
+        run: |
+          rm -rf ios/build && zip -qr FatawaMuyassara-ipad-xcode.zip ios
+      - name: النسخة الثابتة للآيباد (مشروع Xcode)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: "آخر إصدار من التطبيق (روابط ثابتة)"
+          files: FatawaMuyassara-ipad-xcode.zip
+          make_latest: false
