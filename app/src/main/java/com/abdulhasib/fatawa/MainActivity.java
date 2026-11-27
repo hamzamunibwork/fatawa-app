@@ -8,6 +8,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.webkit.JavascriptInterface;
+import org.json.JSONObject;
+import java.util.ArrayList;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -18,6 +22,7 @@ import androidx.webkit.WebViewAssetLoader;
 public class MainActivity extends Activity {
     private static final String HOME = "https://appassets.androidplatform.net/assets/www/index.html";
     private WebView web;
+    private static final int VOICE = 41;
 
     private static boolean hasOrigin(WebResourceRequest r) {
         java.util.Map<String, String> h = r.getRequestHeaders();
@@ -70,8 +75,39 @@ public class MainActivity extends Activity {
             }
         });
 
+        web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         if (b != null) web.restoreState(b);
         else web.loadUrl(HOME);
+    }
+
+    /** البحث بالصوت: خدمة التعرف على الكلام في الجهاز */
+    public class Bridge {
+        @JavascriptInterface
+        public void voiceSearch(final String lang) {
+            runOnUiThread(() -> {
+                Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
+                i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang);
+                i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                try { startActivityForResult(i, VOICE); }
+                catch (Exception e) { web.evaluateJavascript("window.__voiceErr && window.__voiceErr('none')", null); }
+            });
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == VOICE) {
+            String text = "";
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> r = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (r != null && !r.isEmpty()) text = r.get(0);
+            }
+            final String js = text.isEmpty() ? "window.__voiceErr && window.__voiceErr('')" : "window.__voice && window.__voice(" + JSONObject.quote(text) + ")";
+            web.post(() -> web.evaluateJavascript(js, null));
+        }
     }
 
     @Override

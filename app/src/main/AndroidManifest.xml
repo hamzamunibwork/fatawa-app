@@ -3,6 +3,12 @@
 
     <!-- لتلاوة الآيات من الإنترنت ولتحميلها لمن أراد -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- البحث بالصوت -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
