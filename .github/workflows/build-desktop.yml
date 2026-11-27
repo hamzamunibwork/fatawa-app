@@ -32,6 +32,16 @@ jobs:
           name: "نسختا ويندوز والماك (${{ github.run_number }})"
           files: desktop/dist/*.exe
           make_latest: false
+      # نسخة ثابتة الرابط لويندوز في الإصدار app-latest
+      - name: النسخة الثابتة لويندوز
+        shell: bash
+        run: cp desktop/dist/*.exe desktop/FatawaMuyassara-Setup.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: "آخر إصدار من التطبيق (روابط ثابتة)"
+          files: desktop/FatawaMuyassara-Setup.exe
+          make_latest: false
   mac:
     runs-on: macos-latest
     steps:

@@ -47,3 +47,11 @@ jobs:
           name: "الفتاوى الميسّرة — ${{ github.event.head_commit.message || 'تشغيل يدوي' }} (${{ github.run_number }})"
           files: fatawa-muyassara.apk
           make_latest: true
+
+      - name: النسخة الثابتة لأندرويد
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: "آخر إصدار من التطبيق (روابط ثابتة)"
+          files: fatawa-muyassara.apk
+          make_latest: false
