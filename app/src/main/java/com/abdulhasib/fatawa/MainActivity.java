@@ -9,6 +9,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import java.util.Locale;
 import android.webkit.JavascriptInterface;
 import org.json.JSONObject;
 import java.util.ArrayList;
@@ -23,6 +26,9 @@ public class MainActivity extends Activity {
     private static final String HOME = "https://appassets.androidplatform.net/assets/www/index.html";
     private WebView web;
     private static final int VOICE = 41;
+    private TextToSpeech tts;                 // القراءة الصوتية بمحرك الجهاز
+    private volatile boolean ttsReady = false;
+    private volatile boolean ttsInitDone = false;
 
     private static boolean hasOrigin(WebResourceRequest r) {
         java.util.Map<String, String> h = r.getRequestHeaders();
@@ -76,12 +82,95 @@ public class MainActivity extends Activity {
         });
 
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
+        initTts(null);
         if (b != null) web.restoreState(b);
         else web.loadUrl(HOME);
     }
 
-    /** البحث بالصوت: خدمة التعرف على الكلام في الجهاز */
+    private final UtteranceProgressListener ttsListener = new UtteranceProgressListener() {
+        @Override public void onStart(String id) { }
+        @Override public void onDone(String id) { ttsDone(id); }
+        @Override public void onError(String id) { ttsErr("speak"); }
+        @Override public void onError(String id, int code) { ttsErr("speak"); }
+        @Override public void onStop(String id, boolean interrupted) { }
+    };
+
+    /** تهيئة المحرك؛ إن لم يدعم المحرك الافتراضي العربية وكان محرك Google مثبتًا استُعمل محرك Google */
+    private void initTts(final String engine) {
+        ttsReady = false; ttsInitDone = false;
+        TextToSpeech.OnInitListener onInit = status -> {
+            boolean ok = (status == TextToSpeech.SUCCESS);
+            if (ok && engine == null) {
+                try {
+                    if (tts.isLanguageAvailable(new Locale("ar")) < TextToSpeech.LANG_AVAILABLE) {
+                        for (TextToSpeech.EngineInfo e : tts.getEngines()) {
+                            if ("com.google.android.tts".equals(e.name) && !e.name.equals(tts.getDefaultEngine())) {
+                                tts.shutdown(); initTts(e.name); return;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) { }
+            }
+            ttsReady = ok; ttsInitDone = true;
+        };
+        tts = (engine == null) ? new TextToSpeech(this, onInit) : new TextToSpeech(this, onInit, engine);
+        tts.setOnUtteranceProgressListener(ttsListener);
+    }
+
+    private void ttsErr(final String code) {
+        if (web == null) return;
+        web.post(() -> web.evaluateJavascript("window.__ttsErr && window.__ttsErr('" + code.replaceAll("[^a-z]", "") + "')", null));
+    }
+
+    private void ttsDone(final String id) {
+        if (web == null) return;
+        web.post(() -> web.evaluateJavascript("window.__ttsDone && window.__ttsDone('" + id.replaceAll("[^0-9]", "") + "')", null));
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (tts != null) { tts.stop(); tts.shutdown(); }
+        if (web != null) web.destroy();
+        super.onDestroy();
+    }
+
+    /** البحث بالصوت والقراءة الصوتية */
     public class Bridge {
+        @JavascriptInterface
+        public void ttsSpeak(String text, String lang, float rate, String id) {
+            if (!ttsReady) { ttsErr(ttsInitDone ? "noengine" : "notready"); return; }
+            int r = tts.setLanguage(new Locale(lang));
+            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) { ttsErr("nolang"); return; }
+            tts.setSpeechRate(rate);
+            if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, new Bundle(), id) == TextToSpeech.ERROR) ttsErr("speak");
+        }
+
+        @JavascriptInterface
+        public void ttsStop() { if (tts != null) tts.stop(); }
+
+        @JavascriptInterface
+        public void ttsAwake(final boolean on) { runOnUiThread(() -> web.setKeepScreenOn(on)); }
+
+        @JavascriptInterface
+        public void ttsInstallEngine() {
+            runOnUiThread(() -> {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.tts"))); }
+                catch (Exception e) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.tts"))); } catch (Exception ignored) { }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void ttsSettings() {
+            runOnUiThread(() -> {
+                try { startActivity(new Intent("com.android.settings.TTS_SETTINGS")); }
+                catch (Exception e) {
+                    try { startActivity(new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)); } catch (Exception ignored) { }
+                }
+            });
+        }
+
         @JavascriptInterface
         public void voiceSearch(final String lang) {
             runOnUiThread(() -> {

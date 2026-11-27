@@ -4,6 +4,7 @@
   'use strict';
   const D = window.FATAWA || { fatawa: [] }, F = D.fatawa || [];
   const $ = s => document.querySelector(s), V = $('#view');
+  const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
   const AR = n => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const P = (() => { try { return JSON.parse(localStorage.getItem('fw.prefs') || '{}'); } catch (e) { return {}; } })();
@@ -144,6 +145,61 @@
     V.innerHTML = `<form class="sbox" id="sf"><input id="sq" type="search" value="${esc(q)}" autocomplete="off">${clrBtn(q)}${micBtn()}<button class="btn">بحث</button></form>` +
       (r.length ? composed(r) + `<div class="crumb">${AR(r.length)} نتيجة</div>` + r.slice(0, 40).map(item).join('') : `<div class="empty">لم نجد فتوى تطابق بحثك.</div>`) + askBox(q);
   }
+
+  /* ===== القراءة الصوتية: أندرويد بمحرك الجهاز (AndroidBridge)، وغيره بـ speechSynthesis — على نهج مكتبة عبد الحسيب منيب ===== */
+  const SPK = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+  const TTS = (() => {
+    const NB = window.AndroidBridge, native = !!(NB && NB.ttsSpeak), ss = window.speechSynthesis || null;
+    let list = [], i = 0, on = false, playing = false, token = 0;
+    const SEL = 'article.fv > h2, article.fv > .p, article.fv > .ans, article.fv > .sec, article.fv > .rj, article.fv > .qawl, article.fv > .taifa, article.fv > .end, article.fv .tn > .p, article.fv .tn > .rj';
+    function bar() {
+      let b = $('#ttsBar'); if (b) return b;
+      b = document.createElement('div'); b.id = 'ttsBar'; b.className = 'ttsbar tts-skip'; b.hidden = true;
+      b.innerHTML = `<button class="ib" data-tts="next" aria-label="الفقرة التالية"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button class="ib pp" data-tts="pp" aria-label="تشغيل أو إيقاف"></button>
+        <button class="ib" data-tts="prev" aria-label="الفقرة السابقة"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <select data-tts="rate" aria-label="سرعة القراءة"><option value="0.8">٠٫٨×</option><option value="1">١×</option><option value="1.2">١٫٢×</option><option value="1.5">١٫٥×</option></select>
+        <button class="ib" data-tts="close" aria-label="إنهاء الاستماع"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+      document.body.appendChild(b);
+      b.querySelector('select').value = String(P.ttsRate || 1);
+      b.addEventListener('click', e => { const x = e.target.closest('[data-tts]'); if (!x || x.tagName === 'SELECT') return; const a = x.dataset.tts;
+        if (a === 'pp') playing ? pause() : speak(); else if (a === 'next') go(1); else if (a === 'prev') go(-1); else if (a === 'close') stop(); });
+      b.querySelector('select').addEventListener('change', e => { P.ttsRate = +e.target.value; save(); if (playing) speak(); });
+      return b;
+    }
+    function ppIcon() { const b = bar().querySelector('.pp'); b.innerHTML = playing ? '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>'; }
+    function text(e) {
+      const c = e.cloneNode(true); c.querySelectorAll('.src,.tts-skip,svg').forEach(x => x.remove());
+      return c.textContent.replace(/[ً-ْٰۖ-ۭ]/g, '').replace(/[﴿﴾«»{}\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    function mark() { list.forEach((e, k) => e.classList.toggle('tts-cur', k === i)); const e = list[i]; if (e) e.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    function done(id) { if (id !== token || !playing) return; if (i < list.length - 1) { i++; speak(); } else { playing = false; ppIcon(); toast('انتهت الفتوى'); awake(false); } }
+    function speak() {
+      const e = list[i]; if (!e) return; const t = text(e); playing = true; ppIcon(); mark(); awake(true);
+      const my = ++token; if (!t) { setTimeout(() => done(my), 10); return; }
+      const rate = +P.ttsRate || 1;
+      if (native) { NB.ttsSpeak(t, 'ar', rate, String(my)); return; }
+      if (!ss) { toast('القراءة الصوتية غير متاحة في هذا الجهاز'); stop(); return; }
+      ss.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'ar-SA'; u.rate = rate;
+      const v = ss.getVoices().find(x => /^ar/i.test(x.lang)); if (v) u.voice = v;
+      u.onend = () => done(my); u.onerror = () => {}; ss.speak(u);
+    }
+    function silence() { token++; if (native) NB.ttsStop(); else if (ss) ss.cancel(); }
+    function pause() { playing = false; silence(); ppIcon(); awake(false); }
+    function go(d) { const j = i + d; if (j < 0 || j >= list.length) return; i = j; playing ? speak() : mark(); }
+    function awake(v) { if (native && NB.ttsAwake) NB.ttsAwake(!!v); }
+    function stop() { playing = false; silence(); on = false; bar().hidden = true; document.body.classList.remove('tts-on'); list.forEach(e => e.classList.remove('tts-cur')); awake(false); }
+    function start() {
+      list = $$(SEL).filter(e => !e.closest('.tts-skip') && text(e)); if (!list.length) return;
+      i = 0; on = true; bar().hidden = false; document.body.classList.add('tts-on'); speak();
+    }
+    window.__ttsDone = id => done(+id);
+    window.__ttsErr = code => { pause();
+      if (code === 'noengine' && NB && NB.ttsInstallEngine) { toast('لا يوجد في جهازك محرك للقراءة الصوتية. ثبّت «خدمات التعرف على الكلام من Google» من المتجر.'); NB.ttsInstallEngine(); }
+      else if (code === 'notready') toast('محرك القراءة يتهيأ، أعد المحاولة بعد لحظة');
+      else { toast('لا يوجد في جهازك صوت عربي. نزّله من إعدادات «تحويل النص إلى كلام».'); if (NB && NB.ttsSettings) NB.ttsSettings(); } };
+    return { start, stop, get on() { return on; } };
+  })();
   function body(xs) {
     return xs.map(x => {
       switch (x.t) {
@@ -164,6 +220,7 @@
     const rel = (f.related || []).map(t => { const g = F.find(x => x.title === t); return g ? `<span class="chip" data-go="#f/${g.n}">${esc(t)}</span>` : ''; }).join('');
     V.innerHTML = `<article class="fv"><div class="crumb">كتاب ${esc(f.bab)} › باب ${esc(f.sub)}</div>
       <h2><span class="no">الفتوى رقم ${AR(f.n)}:</span> ${esc(f.title)}</h2>
+      <button class="listen tts-skip" data-act="tts">${SPK} استمع إلى الفتوى</button>
       <div class="p"><span class="lbl">السؤال:</span> ${esc(f.q)}</div>
       <div class="ans"><span class="lbl">الجواب المختصر:</span> ${esc(f.short)}</div>
       <div class="p">الحمد لله، والصلاة والسلام على رسول الله، أما بعد:</div>
@@ -194,6 +251,7 @@
     else if (act === 'openAll') { P.open = TREE.map(k => k.name); save(); home(); }
     else if (act === 'closeAll') { P.open = []; save(); home(); }
     else if (act === 'mic') { voice(); }
+    else if (act === 'tts') { TTS.start(); }
     else if (act === 'clr') { const i = $('#sq'); if (i) { i.value = ''; a.hidden = true; i.focus(); } }
     else if (act === 'settings') { $('#sheet').hidden = false; }
     else if (act === 'closeSheet') { $('#sheet').hidden = true; }
@@ -206,6 +264,7 @@
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') $('#sheet').hidden = true; });
   function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.k); toast.k = setTimeout(() => el.hidden = true, 2600); }
   $('#about').innerHTML = `<b>${esc(D.title || 'الفتاوى الميسّرة')}</b> ${esc(D.subtitle || '')}<br>جمعه وأعده: ${esc(D.author || '')}<br>عدد الفتاوى: ${AR(F.length)} — إصدار البرنامج ${AR((window.BOOT && window.BOOT.shell) || '')}${window.BOOT && window.BOOT.ver ? ' (تحديث ' + AR(window.BOOT.ver) + ')' : ''}`;
+  window.addEventListener('hashchange', () => { if (TTS.on) TTS.stop(); });
   window.addEventListener('hashchange', route);
   route();
 })();
